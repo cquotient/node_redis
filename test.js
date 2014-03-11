@@ -2055,6 +2055,46 @@ tests.ENABLE_OFFLINE_QUEUE_FALSE = function () {
     });
 };
 
+tests.ENABLE_OFFLINE_QUEUE_FALSE_MULTI = function() {
+    var name = 'ENABLE_OFFLINE_QUEUE_FALSE_MULTI';
+    var cli = redis.createClient(9999, null, {
+        max_attempts: 1,
+        enable_offline_queue: false
+    });
+    cli.on('error', function(err) {
+//        console.log(err);
+    });
+    var done1, done2, failureTimeout;
+    var ops = [
+        ['get','key1'],
+        ['get','key2']
+    ];
+    function checkForAllPass(){
+        if(done1 && done2) {
+            clearTimeout(failureTimeout);
+            next(name);
+        }
+    }
+    assert.throws(function(){
+        cli.multi(ops).exec();
+        setTimeout(function(){
+            done1 = true;
+            checkForAllPass();
+        }, 50);
+    });
+    assert.doesNotThrow(function(){
+        cli.multi(ops).exec(function(err){
+            assert.ok(err);
+            done2 = true;
+            checkForAllPass();
+        });
+    });
+    failureTimeout = setTimeout(function(){
+        assert.ok(false);
+        next(name);
+    },1000);
+};
+
 tests.SLOWLOG = function () {
     var name = "SLOWLOG";
     client.config("set", "slowlog-log-slower-than", 0, require_string("OK", name));
